@@ -305,54 +305,53 @@ const SCALE      = 4;   // upscale for the web canvas (crisp on phones)
 //  COLOR SCHEME — matches generateGodotColorScheme
 // ═══════════════════════════════════════════════════
 function generateColorScheme(seed, nColors) {
-  const rng = makeXorShift(seed);
-  const aR = lcg.range(0,50)/100, aG = lcg.range(0,50)/100, aB = lcg.range(0,50)/100;
-  const bR = lcg.range(10,60)/100, bG = lcg.range(10,60)/100, bB = lcg.range(10,60)/100;
-  const cR = lcg.range(15,80)/100, cG = lcg.range(15,80)/100, cB = lcg.range(15,80)/100;
-  const dR = lcg.range(0,100)/100, dG = lcg.range(0,100)/100, dB = lcg.range(0,100)/100;
-  const colors = [];
-  for (let i = 0; i < nColors; i++) {
-    const t = i / (nColors - 1);
-    let r = aR + bR * Math.cos(6.28318 * (cR * t + dR)) + t * 0.8;
-    let g = aG + bG * Math.cos(6.28318 * (cG * t + dG)) + t * 0.8;
-    let b = aB + bB * Math.cos(6.28318 * (cB * t + dB)) + t * 0.8;
-    r = Math.max(0, Math.min(1, r));
-    g = Math.max(0, Math.min(1, g));
-    b = Math.max(0, Math.min(1, b));
-    // Convert to RGB888 (same rounding as Arduino color565 → expand → draw)
-    colors.push([Math.round(r*255), Math.round(g*255), Math.round(b*255)]);
-  }
-  return colors;
+    const rng = makeXorShift(seed);
+    const aR = rng.range(0,50)/100, aG = rng.range(0,50)/100, aB = rng.range(0,50)/100;
+    const bR = 10/100+rng.range(0,50)/100, bG = 10/100+rng.range(0,50)/100, bB = 10/100+rng.range(0,50)/100;
+    const cR = 15/100+rng.range(0,65)/100, cG = 15/100+rng.range(0,65)/100, cB = 15/100+rng.range(0,65)/100;
+    const dR = rng.range(0,100)/100, dG = rng.range(0,100)/100, dB = rng.range(0,100)/100;
+    const colors = [];
+    for (let i = 0; i < nColors; i++) {
+        const t = i / (nColors - 1);
+        let r = aR + bR * Math.cos(6.28318 * (cR * t + dR)) + t * 0.8;
+        let g = aG + bG * Math.cos(6.28318 * (cG * t + dG)) + t * 0.8;
+        let b = aB + bB * Math.cos(6.28318 * (cB * t + dB)) + t * 0.8;
+        r = Math.max(0, Math.min(1, r));
+        g = Math.max(0, Math.min(1, g));
+        b = Math.max(0, Math.min(1, b));
+        colors.push([Math.round(r*255), Math.round(g*255), Math.round(b*255)]);
+    }
+    return colors;
 }
 
 // ═══════════════════════════════════════════════════
 //  MAP GENERATION
 // ═══════════════════════════════════════════════════
-function generateRandomMap(map, lcg) {
-  for (let x = 0; x < SPRITE_W/2; x++) {
-    for (let y = 0; y < SPRITE_H; y++) {
-      let filled = (lcg.range(0,100)/100) > 0.48;
-      const toCenterY = Math.abs(y - SPRITE_H/2) * 2 / SPRITE_H;
-      if (x === SPRITE_W/4 - 1 || x === SPRITE_W/4 - 2) {
-        if (lcg.range(0,100)/100 > (0.4 - toCenterY)) filled = true;
-      }
-      map[y][x] = filled;
-      map[y][SPRITE_W - 1 - x] = filled;
+function generateRandomMap(map, rng) {
+    for (let x = 0; x < SPRITE_W/2; x++) {
+        for (let y = 0; y < SPRITE_H; y++) {
+            let filled = (rng.range(0,100)/100) > 0.48;
+            const toCenterY = Math.abs(y - SPRITE_H/2) * 2 / SPRITE_H;
+            if (x === SPRITE_W/4 - 1 || x === SPRITE_W/4 - 2) {
+                if (rng.range(0,100)/100 > (0.4 - toCenterY)) filled = true;
+            }
+            map[y][x] = filled;
+            map[y][SPRITE_W - 1 - x] = filled;
+        }
     }
-  }
 }
 
-function randomWalkSymmetric(map, lcg, steps) {
-  let x = lcg.range(0, SPRITE_W/2);
-  let y = lcg.range(0, SPRITE_H);
-  for (let i = 0; i < steps; i++) {
-    if (x >= 0 && x < SPRITE_W/2 && y >= 0 && y < SPRITE_H) {
-      map[y][x] = true;
-      map[y][SPRITE_W - 1 - x] = true;
+function randomWalkSymmetric(map, rng, steps) {
+    let x = rng.range(0, SPRITE_W/2);
+    let y = rng.range(0, SPRITE_H);
+    for (let i = 0; i < steps; i++) {
+        if (x >= 0 && x < SPRITE_W/2 && y >= 0 && y < SPRITE_H) {
+            map[y][x] = true;
+            map[y][SPRITE_W - 1 - x] = true;
+        }
+        x += rng.rangei(-1, 1);
+        y += rng.rangei(-1, 1);
     }
-    x += lcg.rangei(-1, 1);
-    y += lcg.rangei(-1, 1);
-  }
 }
 
 function countNeighbors(map, x, y) {
@@ -577,14 +576,12 @@ function renderSprite(ctx, map, groups, largest, scale) {
 //  FULL PIPELINE
 // ═══════════════════════════════════════════════════
 function generateSprite(seed) {
-  const rng = makeXorShift(seed);
-  const map  = Array.from({length:SPRITE_H}, ()=>new Array(SPRITE_W).fill(false));
-
-  generateRandomMap(map, lcg);
-  for (let i=0;i<2;i++) randomWalkSymmetric(map, lcg, 100);
-  for (let i=0;i<4;i++) cellularAutomataStep(map);
-
-  return {map, ...buildGroups(map, seed)};
+    const rng = makeXorShift(seed);
+    const map = Array.from({length:SPRITE_H}, ()=>new Array(SPRITE_W).fill(false));
+    generateRandomMap(map, rng);
+    for (let i=0;i<2;i++) randomWalkSymmetric(map, rng, 100);
+    for (let i=0;i<4;i++) cellularAutomataStep(map);
+    return {map, ...buildGroups(map, seed)};
 }
 
 // ═══════════════════════════════════════════════════

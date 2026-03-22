@@ -458,7 +458,7 @@ function floodFill(map, checked, startX, startY, isNeg, noiseSeed, noiseSeed2, b
     const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
     for (const [dx,dy] of dirs) {
       const nx=px+dx, ny=py+dy;
-      if (nx>=0&&nx<SPRITE_W&&ny>=0&&ny<SPRITE_H&&!checked[ny][nx]&&map[ny][nx]===!isNeg) {
+     if (nx>=0&&nx<SPRITE_W&&ny>=0&&ny<SPRITE_H&&!checked[ny][nx]&&map[ny][nx]===true) {
         checked[ny][nx]=true;
         stack.push([nx,ny]);
       }
